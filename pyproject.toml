@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "orchestra-core"
-version = "0.1.0"
+version = "0.1.2"
 description = "Single-tenant persistence kernel for the Unify agent runtime"
 authors = [
     "Unify <hello@unify.ai>",
