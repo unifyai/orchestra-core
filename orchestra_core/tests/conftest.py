@@ -9,8 +9,8 @@ so individual tests can mutate state without bleeding into each other.
 from __future__ import annotations
 
 import os
-import shlex
 import subprocess
+import sys
 from typing import Generator
 
 import pytest
@@ -42,10 +42,12 @@ def _engine() -> Generator[Engine, None, None]:
         conn.commit()
 
     # Run the alembic chain so the test DB is identical to a fresh
-    # production deploy.
+    # production deploy. Use sys.executable rather than `python` so the
+    # subprocess inherits the test runner's interpreter (which has
+    # alembic installed) regardless of how PATH is set up on the host.
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     subprocess.run(
-        shlex.split("python -m alembic -c alembic.ini upgrade head"),
+        [sys.executable, "-m", "alembic", "-c", "alembic.ini", "upgrade", "head"],
         check=True,
         cwd=repo_root,
         env={**os.environ},
