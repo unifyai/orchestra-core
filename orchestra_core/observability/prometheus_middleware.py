@@ -20,7 +20,10 @@ from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_500_INTERNAL_SERVER_ERR
 from starlette.types import ASGIApp
 
 from orchestra_core.observability.inactivity_shutdown import record_activity
-from orchestra_core.observability.observability import clear_user_context, set_request_id
+from orchestra_core.observability.observability import (
+    clear_user_context,
+    set_request_id,
+)
 
 INFO = Gauge(
     "orchestra_app_info",

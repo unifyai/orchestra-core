@@ -25,7 +25,11 @@ def _bucket() -> LocalBucketService:
     return LocalBucketService()
 
 
-@router.post("/storage/upload", response_model=UploadResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/storage/upload",
+    response_model=UploadResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def upload(payload: UploadRequest) -> UploadResponse:
     url, filename = _bucket().upload_media(payload.base64_content, payload.media_type)
     return UploadResponse(url=url, filename=filename)
@@ -35,7 +39,8 @@ def upload(payload: UploadRequest) -> UploadResponse:
 def signed_url(payload: SignedUrlRequest) -> SignedUrlResponse:
     return SignedUrlResponse(
         url=_bucket().get_signed_url(
-            payload.filename, payload.expiration_seconds or 3600,
+            payload.filename,
+            payload.expiration_seconds or 3600,
         ),
     )
 

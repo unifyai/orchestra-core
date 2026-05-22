@@ -43,9 +43,13 @@ class ProjectDAO:
             raise ValueError("Description cannot exceed 256 characters")
 
     def get(self, id: int) -> Optional[Project]:
-        return self.session.execute(
-            select(Project).where(Project.id == id),
-        ).scalars().first()
+        return (
+            self.session.execute(
+                select(Project).where(Project.id == id),
+            )
+            .scalars()
+            .first()
+        )
 
     def create(
         self,

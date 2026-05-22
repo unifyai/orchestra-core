@@ -77,12 +77,15 @@ def _create_tracer_provider() -> TracerProvider:
 
                 tempo_endpoint = f"{settings.tempo_url}/v1/traces"
                 tempo_exporter = HTTPSpanExporter(
-                    endpoint=tempo_endpoint, timeout=5,
+                    endpoint=tempo_endpoint,
+                    timeout=5,
                 )
                 logger.info(f"Configured Tempo HTTP exporter at {tempo_endpoint}")
             elif ":4317" in settings.tempo_url:
                 tempo_exporter = OTLPSpanExporter(
-                    endpoint=settings.tempo_url, insecure=True, timeout=5,
+                    endpoint=settings.tempo_url,
+                    insecure=True,
+                    timeout=5,
                 )
                 logger.info(f"Configured Tempo gRPC exporter at {settings.tempo_url}")
             else:
@@ -92,7 +95,8 @@ def _create_tracer_provider() -> TracerProvider:
 
                 tempo_endpoint = f"{settings.tempo_url}/v1/traces"
                 tempo_exporter = HTTPSpanExporter(
-                    endpoint=tempo_endpoint, timeout=5,
+                    endpoint=tempo_endpoint,
+                    timeout=5,
                 )
                 logger.info(f"Configured Tempo HTTP exporter at {tempo_endpoint}")
             _add_processor(BatchSpanProcessor(tempo_exporter))
@@ -106,7 +110,8 @@ def _create_tracer_provider() -> TracerProvider:
             )
 
             jsonl_exporter = JsonlSpanExporter(
-                settings.otel_log_dir, service_name="orchestra",
+                settings.otel_log_dir,
+                service_name="orchestra",
             )
             _add_processor(SimpleSpanProcessor(jsonl_exporter))
             logger.info(

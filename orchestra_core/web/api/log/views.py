@@ -63,7 +63,8 @@ def _resolve_context_ids(
     rows = (
         session.execute(
             select(Context).where(
-                Context.project_id == project.id, Context.name.in_(names),
+                Context.project_id == project.id,
+                Context.name.in_(names),
             ),
         )
         .scalars()
@@ -72,7 +73,9 @@ def _resolve_context_ids(
     return [r.id for r in rows]
 
 
-@router.post("/logs", response_model=CreateLogsResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/logs", response_model=CreateLogsResponse, status_code=status.HTTP_201_CREATED
+)
 def create_logs(
     payload: CreateLogsRequest,
     request: Request,
@@ -113,7 +116,8 @@ def get_logs(
         ctx = (
             session.execute(
                 select(Context).where(
-                    Context.project_id == project_row.id, Context.name == context,
+                    Context.project_id == project_row.id,
+                    Context.name == context,
                 ),
             )
             .scalars()
@@ -192,7 +196,9 @@ def delete_logs(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/logs/fields", response_model=FieldInfo, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/logs/fields", response_model=FieldInfo, status_code=status.HTTP_201_CREATED
+)
 def create_field(
     payload: CreateFieldRequest,
     request: Request,
@@ -252,7 +258,8 @@ def list_fields(
         ctx = (
             session.execute(
                 select(Context).where(
-                    Context.project_id == project_row.id, Context.name == context,
+                    Context.project_id == project_row.id,
+                    Context.name == context,
                 ),
             )
             .scalars()

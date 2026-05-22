@@ -20,7 +20,9 @@ api_router.include_router(project_router, tags=["Projects"], dependencies=API_KE
 api_router.include_router(context_router, tags=["Contexts"], dependencies=API_KEY_AUTH)
 api_router.include_router(log_router, tags=["Logs"], dependencies=API_KEY_AUTH)
 api_router.include_router(
-    storage_router, tags=["Storage"], dependencies=API_KEY_AUTH,
+    storage_router,
+    tags=["Storage"],
+    dependencies=API_KEY_AUTH,
 )
 
 # unify-SDK compatibility stubs (no auth — these are read-only/no-op

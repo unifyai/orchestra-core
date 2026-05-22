@@ -81,7 +81,8 @@ def get_context(
     ctx = (
         session.execute(
             select(Context).where(
-                Context.project_id == project.id, Context.name == name,
+                Context.project_id == project.id,
+                Context.name == name,
             ),
         )
         .scalars()
@@ -141,7 +142,8 @@ def delete_context(
     ctx = (
         session.execute(
             select(Context).where(
-                Context.project_id == project.id, Context.name == name,
+                Context.project_id == project.id,
+                Context.name == name,
             ),
         )
         .scalars()
@@ -169,7 +171,8 @@ def rename_context(
     ctx = (
         session.execute(
             select(Context).where(
-                Context.project_id == project.id, Context.name == name,
+                Context.project_id == project.id,
+                Context.name == name,
             ),
         )
         .scalars()
@@ -197,7 +200,8 @@ def add_logs_to_context(
     ctx = (
         session.execute(
             select(Context).where(
-                Context.project_id == project.id, Context.name == name,
+                Context.project_id == project.id,
+                Context.name == name,
             ),
         )
         .scalars()
@@ -224,7 +228,8 @@ def commit_context(
     ctx = (
         session.execute(
             select(Context).where(
-                Context.project_id == project.id, Context.name == name,
+                Context.project_id == project.id,
+                Context.name == name,
             ),
         )
         .scalars()
@@ -262,7 +267,8 @@ def rollback_context(
     ctx = (
         session.execute(
             select(Context).where(
-                Context.project_id == project.id, Context.name == name,
+                Context.project_id == project.id,
+                Context.name == name,
             ),
         )
         .scalars()

@@ -1,0 +1,76 @@
+name: tests
+
+on:
+  push:
+    branches:
+    - '**'
+  pull_request:
+    branches:
+    - '**'
+
+jobs:
+  black:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: psf/black@stable
+      with:
+        options: "--check"
+        version: "26.1.0"
+        src: "orchestra_core"
+
+  pytest:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: orchestra
+          POSTGRES_PASSWORD: orchestra
+          POSTGRES_DB: orchestra_core
+        options: >-
+          --health-cmd="pg_isready"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+        ports:
+        - 5432:5432
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install Poetry
+      run: |
+        # Pin to avoid the parallel-installer race seen on multi-shard
+        # platform CI when poetry installs git deps.
+        pip install --upgrade pip
+        pip install 'virtualenv>=20.25,<21'
+        pip install 'poetry==2.2.1'
+
+    - name: Cache poetry dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pypoetry
+        key: poetry-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+        restore-keys: |
+          poetry-${{ runner.os }}-
+
+    - name: Install deps
+      run: poetry install
+      env:
+        POETRY_VIRTUALENVS_CREATE: "false"
+
+    - name: Run pytest
+      run: poetry run pytest -p no:warnings -vv --color=no orchestra_core/tests/
+      env:
+        ORCHESTRA_DB_HOST: localhost
+        ORCHESTRA_DB_PORT: "5432"
+        ORCHESTRA_DB_USER: orchestra
+        ORCHESTRA_DB_PASS: orchestra
+        ORCHESTRA_DB_BASE: orchestra_core
+        ORCHESTRA_OTEL: "false"
+        ORCHESTRA_LOG: "false"

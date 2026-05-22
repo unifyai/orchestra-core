@@ -74,7 +74,8 @@ def create_project(
     )
     session.commit()
     project = dao.get_by_user_and_name(
-        user_id=request.state.user_id, name=payload.name,
+        user_id=request.state.user_id,
+        name=payload.name,
     )
     if project is None:
         raise not_found("project")
@@ -200,7 +201,8 @@ def rename_project(
     )
     session.commit()
     project = dao.get_by_user_and_name(
-        user_id=request.state.user_id, name=payload.new_name,
+        user_id=request.state.user_id,
+        name=payload.new_name,
     )
     if project is None:
         raise not_found("project")

@@ -60,13 +60,10 @@ class LogEventDAO:
         if ids:
             query = query.where(LogEvent.id.in_(ids))
         if context_id is not None:
-            query = (
-                query.join(
-                    LogEventContext,
-                    LogEventContext.log_event_id == LogEvent.id,
-                )
-                .where(LogEventContext.context_id == context_id)
-            )
+            query = query.join(
+                LogEventContext,
+                LogEventContext.log_event_id == LogEvent.id,
+            ).where(LogEventContext.context_id == context_id)
         query = query.order_by(LogEvent.id)
         if limit is not None:
             query = query.limit(limit).offset(offset)
