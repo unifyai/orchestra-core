@@ -1,19 +1,10 @@
 """Initial kernel schema.
 
-Creates the 13 kernel tables registered on `orchestra_core.db.meta`:
-
-- project, project_version
-- context, context_counter, context_version
-- log_event, log_event_context, log_event_version
-- active_derived_log_template, log_unique_constraint
-- field_type
-- embedding, embedding_queue
-
-Uses the SQLAlchemy metadata directly so the migration stays in sync with
-the model definitions without a hand-maintained DDL block. The kernel's
-alembic env (orchestra_core/db/migrations/env.py) loads only the kernel
-model package, so `meta.create_all()` here creates exactly the kernel
-tables and nothing else.
+Creates the 13 kernel tables registered by orchestra_core's model package.
+The set is enumerated explicitly so this migration creates ONLY kernel
+tables even when run inside a platform alembic context that has loaded
+the full union of kernel + platform models onto the shared
+`orchestra_core.db.meta` MetaData.
 
 Revision ID: 0001_core_initial
 Revises:
@@ -29,24 +20,51 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
+# Tables this migration owns. Listed in dependency order so we can drop
+# them safely on downgrade.
+KERNEL_TABLES = (
+    "active_derived_log_template",
+    "context_counter",
+    "log_event_context",
+    "log_event_version",
+    "log_unique_constraint",
+    "embedding_queue",
+    "embedding",
+    "field_type",
+    "log_event",
+    "context_version",
+    "context",
+    "project_version",
+    "project",
+)
 
-def upgrade() -> None:
-    bind = op.get_bind()
 
-    # Required for the embedding/embedding_queue Vector columns.
-    bind.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS vector")
+def _kernel_tables():
+    """Resolve the kernel Table objects against the shared metadata.
 
+    Importing core_models registers them on `orchestra_core.db.meta.meta`.
+    """
     from orchestra_core.db.meta import meta
     from orchestra_core.db.models import load_all_models
 
     load_all_models()
-    meta.create_all(bind=bind, checkfirst=True)
+    return [meta.tables[name] for name in KERNEL_TABLES if name in meta.tables]
+
+
+def upgrade() -> None:
+    bind = op.get_bind()
+    bind.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS vector")
+
+    from orchestra_core.db.meta import meta
+
+    # `tables=` filters create_all to exactly this set, so platform context
+    # contamination of `meta.tables` does not cause us to create platform
+    # tables here.
+    meta.create_all(bind=bind, tables=_kernel_tables(), checkfirst=True)
 
 
 def downgrade() -> None:
     bind = op.get_bind()
     from orchestra_core.db.meta import meta
-    from orchestra_core.db.models import load_all_models
 
-    load_all_models()
-    meta.drop_all(bind=bind, checkfirst=True)
+    meta.drop_all(bind=bind, tables=list(reversed(_kernel_tables())), checkfirst=True)
