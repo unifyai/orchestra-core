@@ -1,0 +1,78 @@
+[tool.poetry]
+name = "orchestra-core"
+version = "0.1.0"
+description = "Single-tenant persistence kernel for the Unify agent runtime"
+authors = [
+    "Unify <hello@unify.ai>",
+]
+maintainers = [
+    "Unify <hello@unify.ai>",
+]
+readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/unifyai/orchestra-core"
+repository = "https://github.com/unifyai/orchestra-core"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+]
+packages = [{ include = "orchestra_core" }]
+
+[tool.poetry.dependencies]
+python = "~3.12"
+fastapi = "^0.100.0"
+uvicorn = { version = "^0.22.0", extras = ["standard"] }
+pydantic = "^2"
+pydantic-settings = "^2"
+yarl = "^1.9.2"
+ujson = "^5.8.0"
+SQLAlchemy = {version = "^2.0.18", extras = ["asyncio"]}
+alembic = "^1.11.1"
+asyncpg = {version = "^0.28.0", extras = ["sa"]}
+httptools = "^0.6.0"
+prometheus-client = "^0.17.0"
+prometheus-fastapi-instrumentator = "6.0.0"
+opentelemetry-api = ">=1.29.0"
+opentelemetry-sdk = ">=1.29.0"
+opentelemetry-exporter-otlp = ">=1.29.0"
+opentelemetry-instrumentation = ">=0.59b0"
+opentelemetry-instrumentation-fastapi = ">=0.50b0"
+opentelemetry-instrumentation-sqlalchemy = ">=0.50b0"
+opentelemetry-instrumentation-httpx = ">=0.60b1"
+httpx = "^0.24.0"
+loguru = "^0.7.0"
+psycopg2-binary = "^2.9.9"
+python-multipart = "^0.0.9"
+pgvector = "^0.4.1"
+python-dotenv = "^1.2.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+pytest-asyncio = "^0.24.0"
+black = "==26.1.0"
+isort = "^5.11.4"
+httpx = "^0.24.0"
+
+[tool.black]
+extend-exclude = '''
+^/scripts/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+src_paths = ["orchestra_core",]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+    "ignore:.*unclosed.*:ResourceWarning",
+    "ignore::UserWarning",
+]
+asyncio_default_fixture_loop_scope = "function"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
