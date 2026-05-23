@@ -1,0 +1,72 @@
+---
+description: Orchestra Repository Role - The Backend API & Database Layer
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Orchestra: The Backend API & Database Layer (split into orchestra-core + orchestra-platform)
+
+The Orchestra codebase is split across two Git repositories that share a single Postgres database at runtime:
+
+- **[`orchestra-core`](https://github.com/unifyai/orchestra-core)** (public) — single-user kernel package. Owns 13 tables: `project`, `project_version`, `context`, `context_counter`, `context_version`, `log_event`, `log_event_context`, `log_event_version`, `active_derived_log_template`, `log_unique_constraint`, `field_type`, `embedding`, `embedding_queue`. Plus the kernel-side FastAPI routers (project, context, log, storage), DAOs, and observability primitives.
+- **`orchestra-platform`** (private, this repo) — the hosted multi-tenant superset. Owns ~56 tenant-aware tables (`user`, `organization`, `billing_account`, `assistants`, `api_key`, `voices`, `space`, `team`, `interface`, `tile`, etc.) plus all platform-only services (Stripe, Twilio, ElevenLabs, OAuth, MFA, etc.). Imports `orchestra-core` as a Git URL dependency.
+
+The dependency is **one-way**: orchestra-platform imports from orchestra-core, never the other direction. `scripts/check_core_purity.sh` enforces this in CI on every PR.
+
+## Where does a change belong?
+
+| You're touching… | Repo |
+|---|---|
+| Kernel tables (`project`, `context`, `log_event`, `field_type`, `embedding`, etc.) | `orchestra-core` |
+| Kernel DAO / endpoint / service that operates without account or tenant context | `orchestra-core` |
+| Tenant-aware tables (`user`, `organization`, `billing_*`, `assistants`, `api_key`, `voices`, `space`, etc.) | `orchestra-platform` |
+| Code that uses `user_id`/`organization_id`/`assistant_id` for access control | `orchestra-platform` |
+| Stripe, Twilio, ElevenLabs, Cartesia, Deepgram, Vertex AI integrations | `orchestra-platform` |
+| Console-facing UI state (`interface`, `tile`, `tab`, `dashboard_token`) | `orchestra-platform` |
+
+Test: "Could this run in a fully local, single-user, no-billing context?" If yes → orchestra-core. Otherwise → orchestra-platform.
+
+## Alembic chain
+
+Both repos share one MetaData object (`orchestra_core.db.meta.meta`) and one alembic chain at runtime. orchestra-core ships migrations under `orchestra_core/db/migrations/versions/`; orchestra-platform's `env.py` discovers both directories. The platform's chain leaf is `2026_platform_drift_fixes` (a merge node combining the platform squash and the kernel drift-fix branch).
+
+When adding a migration:
+
+- Modifies kernel tables → place in `orchestra-core`, bump its tag, update orchestra-platform's `pyproject.toml` to consume the new tag.
+- Modifies platform tables → place here, with `down_revision = "2026_platform_drift_fixes"` (or the current platform leaf).
+- Modifies both → split into two migrations (one per repo); the platform one declares `depends_on` against the kernel one.
+
+## Responsibilities
+
+- User accounts, authentication, and API keys (platform)
+- Projects, contexts, and logging/metrics (kernel — but the multi-tenant access control wrapping them is platform)
+- Assistants (profiles, phone numbers, voice settings, desktop URLs) (platform)
+- Billing, credits, and Stripe webhook handling (platform)
+- Interfaces, tabs, and tiles for Console UI state (platform)
+- Object storage and signed URL generation (kernel: bucket service; platform: GCS bindings + multi-tenant policies)
+- Observability infrastructure (Prometheus, Loki, Tempo, Grafana) (split: kernel ships OTel primitives, platform layers OpenAI instrumentation + dashboards)
+
+## Architecture
+
+The codebase follows a clean layered structure: `web/api/` contains FastAPI routers, `db/dao/` contains data access objects, `db/models/` contains SQLAlchemy ORM models, and `db/migrations/` contains Alembic migrations. Services in `services/` handle external integrations.
+
+orchestra-core mirrors the same layout under `orchestra_core/`.
+
+## Position in the System
+
+Orchestra is the source of truth for all persistent data. When Unity's managers call `unify.log()` or store contacts/tasks/knowledge, those requests hit Orchestra's endpoints. The Console reads from and writes to Orchestra for all UI state. Communication service authenticates against Orchestra for admin operations.
+
+A fully-local single-user install can run **just** orchestra-core against a local Postgres; a hosted/managed deployment runs orchestra-platform against the same DB.
+
+## Related Repositories
+
+- **orchestra-core** (public): the kernel; consumed via Git URL dependency from this repo's `pyproject.toml`
+- **unity**: The AI brain that persists its state to Orchestra
+- **unify**: Python SDK that wraps Orchestra's REST API
+- **console**: Web UI that reads/writes Orchestra data
+- **communication**: Authenticates with Orchestra for admin operations
+- **unillm**: Independent (no direct Orchestra dependency)
+
+## Mirrored Artifacts
+
+- **OAuth Scopes** (`web/api/assistant/scopes.py`): Mirrored in Communication's `common/scopes.py`. Any change MUST be applied in both repos in the same changeset. See `scopes-mirror.mdc`.
