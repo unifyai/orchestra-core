@@ -1,0 +1,60 @@
+---
+description: orchestra-core Repository Role - Public Single-User Kernel
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# orchestra-core: The Public Single-User Persistence Kernel
+
+[`orchestra-core`](https://github.com/unifyai/orchestra-core) is the open-sourceable kernel of the Orchestra backend. It holds the data primitives any single-user assistant needs, with **zero tenant or billing concerns**. Everything an open-source user needs to spin up a fully local Unify-style stack lives here; everything else lives in the private `orchestra-platform` repo.
+
+## What it owns
+
+- 13 kernel tables: `project`, `project_version`, `context`, `context_counter`, `context_version`, `log_event`, `log_event_context`, `log_event_version`, `active_derived_log_template`, `log_unique_constraint`, `field_type`, `embedding`, `embedding_queue`
+- The shared SQLAlchemy `MetaData` object that both repos register models against (`orchestra_core.db.meta`)
+- Kernel-only FastAPI routers: project, context, log, storage, plus minimal "local stub" routers (`/v0/user/basic-info`, `/v0/user/spend`, `/v0/credits/deduct`, `/v0/assistant`) so unify-SDK clients work against a kernel-only deployment
+- Kernel DAOs: lean CRUD with no multi-tenant access control logic
+- Local-filesystem implementation of the bucket service (a kernel-only alternative to platform's GCS-backed one)
+- OpenTelemetry primitives (file/filtering exporters, span processor, request trace middleware, prometheus middleware, OTel setup, inactivity shutdown)
+- Stub auth (`ORCHESTRA_API_KEY` env-var bearer) — no user accounts, no roles, no MFA
+
+## What it does NOT own
+
+If a change touches any of these, it belongs in `orchestra-platform`, not here:
+
+- `user`, `organization`, `organization_member`, `assistants`, `api_key`, `billing_*`, `recharge`, `credit_transaction`, `voices`, `phone_*`, `mfa_*`, `oauth_*`, `space`, `team`, `interface`, `tile`, `dashboard_token`, etc.
+- Stripe / Twilio / ElevenLabs / Cartesia / Deepgram / Vertex AI / OAuth integrations
+- Anything that consults `user_id` or `organization_id` for access control
+
+## Dependency direction
+
+`orchestra-core` **may not** import from `orchestra-platform`. The dependency is one-way: platform imports core. CI in the platform repo runs `scripts/check_core_purity.sh` on every PR to enforce this.
+
+## Distribution
+
+- Tagged Git URL (no PyPI). `orchestra-platform` pins a specific tag (e.g. `v0.1.2`) in its `pyproject.toml`.
+- Releases are tagged on `main` after PR merge: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`. Then bump `orchestra-platform`'s `pyproject.toml` + regenerate `poetry.lock` to consume the new tag.
+
+## Alembic chain
+
+orchestra-core's chain currently has two revisions:
+
+- `0001_core_initial` — creates the 13 kernel tables via `meta.create_all` (filtered to kernel tables).
+- `0002_kernel_drift_fixes` — converges historical platform-driven kernel-table state with the model: renames `pk_context_counter` → `context_counter_pkey` and backfills `ck_*_description_len` CHECK constraints. Idempotent.
+
+orchestra-platform's `env.py` discovers `orchestra_core/db/migrations/versions/` at import time so the unified chain works under either alembic env. The two chains formally converge at the platform's `2026_platform_drift_fixes` merge node.
+
+## Test environment
+
+orchestra-core ships its own pytest suite: a session-scoped Postgres+pgvector fixture, a `dbsession` per test that runs alembic up to head against a clean DB, and a TestClient-based smoke suite under `orchestra_core/tests/`. The suite is intentionally minimal — kernel scope only, no LLM calls, no Cloud SQL, no Stripe.
+
+## When to release a new version
+
+Bump and tag a new orchestra-core version when:
+
+- A kernel table changes (new column, new index, new constraint)
+- A kernel DAO/router gets a new method or changes a signature
+- A kernel migration is added
+- The shared MetaData object's naming convention or other contract changes
+
+For pure-platform changes, no orchestra-core release is needed — `orchestra-platform` keeps consuming the existing tag.
