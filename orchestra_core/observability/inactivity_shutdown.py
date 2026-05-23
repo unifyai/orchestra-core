@@ -146,7 +146,12 @@ def start_inactivity_monitor() -> None:
     global _monitor_task
 
     timeout = settings.inactivity_timeout_seconds
-    if timeout is None:
+    # `None` (env var unset) and `<= 0` (set explicitly to 0 or negative,
+    # the natural "disabled" idiom) both mean "no auto-shutdown". Without
+    # the `<= 0` branch, `ORCHESTRA_INACTIVITY_TIMEOUT_SECONDS=0` would
+    # mean "shut down after 0 seconds of inactivity" -> immediate
+    # shutdown on first idle tick, which is never what callers want.
+    if timeout is None or timeout <= 0:
         return
 
     if _monitor_task is not None and not _monitor_task.done():

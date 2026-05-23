@@ -172,22 +172,24 @@ start_server() {
     log "Starting uvicorn (logs -> $LOGFILE)..."
     # Background uvicorn so the script returns once the server is healthy.
     # `setsid` (where available) detaches the child into its own session so
-    # it survives the parent shell exiting.
+    # it survives the parent shell exiting. The orchestra_core entrypoint
+    # reads its config from environment variables, so we export everything
+    # explicitly here — multi-line `VAR=val \` env-prefix can't combine
+    # with `${VAR:+...}` parameter expansion (bash parses the expanded
+    # token as a command, not as another env-prefix), which is why we use
+    # plain `export` instead.
+    export ORCHESTRA_DB_HOST ORCHESTRA_DB_PORT ORCHESTRA_DB_USER \
+           ORCHESTRA_DB_PASS ORCHESTRA_DB_BASE ORCHESTRA_API_KEY \
+           ORCHESTRA_HOST ORCHESTRA_PORT ORCHESTRA_OTEL
+    if [[ -n "${ORCHESTRA_INACTIVITY_TIMEOUT_SECONDS:-}" ]]; then
+        export ORCHESTRA_INACTIVITY_TIMEOUT_SECONDS
+    fi
+
     local launcher="bash -c"
     if command -v setsid >/dev/null 2>&1; then
         launcher="setsid bash -c"
     fi
 
-    ORCHESTRA_DB_HOST="$ORCHESTRA_DB_HOST" \
-    ORCHESTRA_DB_PORT="$ORCHESTRA_DB_PORT" \
-    ORCHESTRA_DB_USER="$ORCHESTRA_DB_USER" \
-    ORCHESTRA_DB_PASS="$ORCHESTRA_DB_PASS" \
-    ORCHESTRA_DB_BASE="$ORCHESTRA_DB_BASE" \
-    ORCHESTRA_API_KEY="$ORCHESTRA_API_KEY" \
-    ORCHESTRA_HOST="$ORCHESTRA_HOST" \
-    ORCHESTRA_PORT="$ORCHESTRA_PORT" \
-    ORCHESTRA_OTEL="$ORCHESTRA_OTEL" \
-    ${ORCHESTRA_INACTIVITY_TIMEOUT_SECONDS:+ORCHESTRA_INACTIVITY_TIMEOUT_SECONDS="$ORCHESTRA_INACTIVITY_TIMEOUT_SECONDS"} \
     $launcher "exec '$PY' -m orchestra_core" >"$LOGFILE" 2>&1 &
     local pid=$!
     disown "$pid" 2>/dev/null || true
